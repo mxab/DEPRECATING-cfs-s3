@@ -123,10 +123,34 @@ FS.Store.S3 = function(name, options) {
     },
     createReadStream: function(fileKey, options) {
 
+      if(!this.exists(fileKey)){
+        return null;
+      }
       return S3.createReadStream({
         Bucket: bucket,
         Key: folder + fileKey
       });
+
+    },
+    exists: function(fileKey) {
+
+      var syncExistsCall = Meteor.wrapAsync(function(fileKey,callback){
+
+        S3.headObject({
+          Bucket: bucket,
+          Key: folder + fileKey
+        }, function (err) {
+          if(!err){
+            callback(null,true);
+          } else if (err && err.code === 'Not Found') {
+            callback(null,false);
+          } else {
+            callback(err);
+          }
+        });
+
+      });
+      return syncExistsCall(fileKey);
 
     },
     // Comment to documentation: Set options.ContentLength otherwise the
